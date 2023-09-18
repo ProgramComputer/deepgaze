@@ -42,7 +42,7 @@ def yaw2rotmat(yaw):
     return rot
 
 
-sess = tf.Session() #Launch the graph in a session.
+sess = tf.compat.v1.Session() #Launch the graph in a session.
 my_head_pose_estimator = CnnHeadPoseEstimator(sess) #Head pose estimation object
 # Load the weights from the configuration folders
 my_head_pose_estimator.load_yaw_variables(os.path.realpath("../../etc/tensorflow/head_pose/yaw/cnn_cccdd_30k.tf"))
