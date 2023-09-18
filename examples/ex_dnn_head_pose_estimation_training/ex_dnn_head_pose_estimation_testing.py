@@ -38,14 +38,14 @@ with graph.as_default():
     num_labels = 3
     
     #0- the input placeholder
-    tf_input = tf.placeholder(tf.float32,shape=(batch_size, image_size * image_size))
+    tf_input = tf.compat.v1.placeholder(tf.float32,shape=(batch_size, image_size * image_size))
     
     #1- weights
     #tf.truncated_normal(shape, mean=0.0, stddev=1.0)
-    weights_input0 = tf.Variable(tf.truncated_normal([image_size * image_size, num_hidden_units_1], 0.0, 1.0))    
-    weights_hidden1 = tf.Variable(tf.truncated_normal([num_hidden_units_1, num_hidden_units_2], 0.0, 1.0))
-    weights_hidden2 = tf.Variable(tf.truncated_normal([num_hidden_units_2, num_hidden_units_3], 0.0, 1.0)) 
-    weights_output3 = tf.Variable(tf.truncated_normal([num_hidden_units_3, num_labels], 0.0, 1.0))    
+    weights_input0 = tf.Variable(tf.random.truncated_normal([image_size * image_size, num_hidden_units_1], 0.0, 1.0))    
+    weights_hidden1 = tf.Variable(tf.random.truncated_normal([num_hidden_units_1, num_hidden_units_2], 0.0, 1.0))
+    weights_hidden2 = tf.Variable(tf.random.truncated_normal([num_hidden_units_2, num_hidden_units_3], 0.0, 1.0)) 
+    weights_output3 = tf.Variable(tf.random.truncated_normal([num_hidden_units_3, num_labels], 0.0, 1.0))    
     
     #2- biases
     biases_input0 = tf.Variable(tf.zeros([num_hidden_units_1]))
@@ -64,7 +64,7 @@ with graph.as_default():
 
 #Print the variables 
 print("========== ALL TF VARS ======== ")
-all_vars = tf.all_variables()
+all_vars = tf.compat.v1.all_variables()
 for k in all_vars:
       print(k.name)
 
@@ -72,11 +72,11 @@ for k in all_vars:
 ckpt = tf.train.get_checkpoint_state("./dnn_1600i_4h_3o")
 
 #Create the session
-_sess = tf.Session()
+_sess = tf.compat.v1.Session()
       
 #Associate the weights stored in the checkpoint file to the
 #local tensorflow variables      
-tf.train.Saver(({"dnn_weights_input0": weights_input0, "dnn_biases_input0": biases_input0,
+tf.compat.v1.train.Saver(({"dnn_weights_input0": weights_input0, "dnn_biases_input0": biases_input0,
                  "dnn_weights_hidden1": weights_hidden1, "dnn_biases_hidden1": biases_hidden1,
                  "dnn_weights_hidden2": weights_hidden2, "dnn_biases_hidden2": biases_hidden2,
                  "dnn_weights_output3": weights_output3, "dnn_biases_output3": biases_output3

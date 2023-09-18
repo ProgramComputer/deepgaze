@@ -51,7 +51,7 @@ class CnnHeadPoseEstimator:
         """ Print all the Tensorflow allocated variables
 
         """
-        all_vars = tf.all_variables()
+        all_vars = tf.compat.v1.all_variables()
 
         print("[DEEPGAZE] Printing all the Allocated Tensorflow Variables:")
         for k in all_vars:
@@ -66,34 +66,34 @@ class CnnHeadPoseEstimator:
         """
         self._num_labels = 1
         # Input data [batch_size, image_size, image_size, channels]
-        self.tf_yaw_input_vector = tf.placeholder(tf.float32, shape=(64, 64, 3))
+        self.tf_yaw_input_vector = tf.compat.v1.placeholder(tf.float32, shape=(64, 64, 3))
         
         # Variables.
         #Conv layer
         #[patch_size, patch_size, num_channels, depth]
-        self.hy_conv1_weights = tf.Variable(tf.truncated_normal([3, 3, 3, 64], stddev=0.1))
+        self.hy_conv1_weights = tf.Variable(tf.random.truncated_normal([3, 3, 3, 64], stddev=0.1))
         self.hy_conv1_biases = tf.Variable(tf.zeros([64]))
         #Conv layer
         #[patch_size, patch_size, depth, depth]
-        self.hy_conv2_weights = tf.Variable(tf.truncated_normal([3, 3, 64, 128], stddev=0.1))
-        self.hy_conv2_biases = tf.Variable(tf.random_normal(shape=[128]))
+        self.hy_conv2_weights = tf.Variable(tf.random.truncated_normal([3, 3, 64, 128], stddev=0.1))
+        self.hy_conv2_biases = tf.Variable(tf.random.normal(shape=[128]))
         #Conv layer
         #[patch_size, patch_size, depth, depth]
-        self.hy_conv3_weights = tf.Variable(tf.truncated_normal([3, 3, 128, 256], stddev=0.1)) #was[3, 3, 128, 256]
-        self.hy_conv3_biases = tf.Variable(tf.random_normal(shape=[256]))
+        self.hy_conv3_weights = tf.Variable(tf.random.truncated_normal([3, 3, 128, 256], stddev=0.1)) #was[3, 3, 128, 256]
+        self.hy_conv3_biases = tf.Variable(tf.random.normal(shape=[256]))
 
         #Dense layer
         #[ 5*5 * previous_layer_out , num_hidden] wd1
         #here 5*5 is the size of the image after pool reduction (divide by half 3 times)
-        self.hy_dense1_weights = tf.Variable(tf.truncated_normal([8 * 8 * 256, 256], stddev=0.1)) #was [5*5*256, 1024]
-        self.hy_dense1_biases = tf.Variable(tf.random_normal(shape=[256]))
+        self.hy_dense1_weights = tf.Variable(tf.random.truncated_normal([8 * 8 * 256, 256], stddev=0.1)) #was [5*5*256, 1024]
+        self.hy_dense1_biases = tf.Variable(tf.random.normal(shape=[256]))
         #Dense layer
         #[ , num_hidden] wd2
         #self.hy_dense2_weights = tf.Variable(tf.truncated_normal([256, 256], stddev=0.01))
         #self.hy_dense2_biases = tf.Variable(tf.random_normal(shape=[256]))
         #Output layer
-        self.hy_out_weights = tf.Variable(tf.truncated_normal([256, self._num_labels], stddev=0.1))
-        self.hy_out_biases = tf.Variable(tf.random_normal(shape=[self._num_labels]))
+        self.hy_out_weights = tf.Variable(tf.random.truncated_normal([256, self._num_labels], stddev=0.1))
+        self.hy_out_biases = tf.Variable(tf.random.normal(shape=[self._num_labels]))
 
         # dropout (keep probability)
         #self.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
@@ -105,10 +105,10 @@ class CnnHeadPoseEstimator:
             if(DEBUG == True): print("SHAPE X: " + str(X.get_shape()))
 
             # Convolution Layer 1
-            conv1 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(X, self.hy_conv1_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hy_conv1_biases))
+            conv1 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(X, filters=self.hy_conv1_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hy_conv1_biases))
             if(DEBUG == True): print("SHAPE conv1: " + str(conv1.get_shape()))
             # Max Pooling (down-sampling)
-            pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool1 = tf.nn.max_pool2d(input=conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool1: " + str(pool1.get_shape()))
             # Apply Normalization
             norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -116,10 +116,10 @@ class CnnHeadPoseEstimator:
             #norm1 = tf.nn.dropout(norm1, _dropout)
  
             # Convolution Layer 2
-            conv2 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm1, self.hy_conv2_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hy_conv2_biases))
+            conv2 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm1, filters=self.hy_conv2_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hy_conv2_biases))
             if(DEBUG == True): print("SHAPE conv2: " + str(conv2.get_shape()))
             # Max Pooling (down-sampling)
-            pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool2 = tf.nn.max_pool2d(input=conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool2: " + str(pool2.get_shape()))
             # Apply Normalization
             norm2 = tf.nn.lrn(pool2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -127,10 +127,10 @@ class CnnHeadPoseEstimator:
             #norm2 = tf.nn.dropout(norm2, _dropout)
 
             # Convolution Layer 3
-            conv3 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm2, self.hy_conv3_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hy_conv3_biases))
+            conv3 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm2, filters=self.hy_conv3_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hy_conv3_biases))
             if(DEBUG == True): print("SHAPE conv3: " + str(conv3.get_shape()))
             # Max Pooling (down-sampling)
-            pool3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool3 = tf.nn.max_pool2d(input=conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool3: " + str(pool3.get_shape()))
             # Apply Normalization
             norm3 = tf.nn.lrn(pool3, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -175,7 +175,7 @@ class CnnHeadPoseEstimator:
 
         if(os.path.isfile(YawFilePath)==False): raise ValueError('[DEEPGAZE] CnnHeadPoseEstimator(load_yaw_variables): the yaw file path is incorrect.')
 
-        tf.train.Saver(({"conv1_yaw_w": self.hy_conv1_weights, "conv1_yaw_b": self.hy_conv1_biases,
+        tf.compat.v1.train.Saver(({"conv1_yaw_w": self.hy_conv1_weights, "conv1_yaw_b": self.hy_conv1_biases,
                          "conv2_yaw_w": self.hy_conv2_weights, "conv2_yaw_b": self.hy_conv2_biases,
                          "conv3_yaw_w": self.hy_conv3_weights, "conv3_yaw_b": self.hy_conv3_biases,
                          "dense1_yaw_w": self.hy_dense1_weights, "dense1_yaw_b": self.hy_dense1_biases,
@@ -231,34 +231,34 @@ class CnnHeadPoseEstimator:
         """
         self._num_labels = 1
         # Input data [batch_size, image_size, image_size, channels]
-        self.tf_pitch_input_vector = tf.placeholder(tf.float32, shape=(64, 64, 3))
+        self.tf_pitch_input_vector = tf.compat.v1.placeholder(tf.float32, shape=(64, 64, 3))
         
         # Variables.
         #Conv layer
         #[patch_size, patch_size, num_channels, depth]
-        self.hp_conv1_weights = tf.Variable(tf.truncated_normal([3, 3, 3, 64], stddev=0.1))
+        self.hp_conv1_weights = tf.Variable(tf.random.truncated_normal([3, 3, 3, 64], stddev=0.1))
         self.hp_conv1_biases = tf.Variable(tf.zeros([64]))
         #Conv layer
         #[patch_size, patch_size, depth, depth]
-        self.hp_conv2_weights = tf.Variable(tf.truncated_normal([3, 3, 64, 128], stddev=0.1))
-        self.hp_conv2_biases = tf.Variable(tf.random_normal(shape=[128]))
+        self.hp_conv2_weights = tf.Variable(tf.random.truncated_normal([3, 3, 64, 128], stddev=0.1))
+        self.hp_conv2_biases = tf.Variable(tf.random.normal(shape=[128]))
         #Conv layer
         #[patch_size, patch_size, depth, depth]
-        self.hp_conv3_weights = tf.Variable(tf.truncated_normal([3, 3, 128, 256], stddev=0.1)) #was[3, 3, 128, 256]
-        self.hp_conv3_biases = tf.Variable(tf.random_normal(shape=[256]))
+        self.hp_conv3_weights = tf.Variable(tf.random.truncated_normal([3, 3, 128, 256], stddev=0.1)) #was[3, 3, 128, 256]
+        self.hp_conv3_biases = tf.Variable(tf.random.normal(shape=[256]))
 
         #Dense layer
         #[ 5*5 * previous_layer_out , num_hidden] wd1
         #here 5*5 is the size of the image after pool reduction (divide by half 3 times)
-        self.hp_dense1_weights = tf.Variable(tf.truncated_normal([8 * 8 * 256, 256], stddev=0.1)) #was [5*5*256, 1024]
-        self.hp_dense1_biases = tf.Variable(tf.random_normal(shape=[256]))
+        self.hp_dense1_weights = tf.Variable(tf.random.truncated_normal([8 * 8 * 256, 256], stddev=0.1)) #was [5*5*256, 1024]
+        self.hp_dense1_biases = tf.Variable(tf.random.normal(shape=[256]))
         #Dense layer
         #[ , num_hidden] wd2
         #self.hp_dense2_weights = tf.Variable(tf.truncated_normal([256, 256], stddev=0.01))
         #self.hp_dense2_biases = tf.Variable(tf.random_normal(shape=[256]))
         #Output layer
-        self.hp_out_weights = tf.Variable(tf.truncated_normal([256, self._num_labels], stddev=0.1))
-        self.hp_out_biases = tf.Variable(tf.random_normal(shape=[self._num_labels]))
+        self.hp_out_weights = tf.Variable(tf.random.truncated_normal([256, self._num_labels], stddev=0.1))
+        self.hp_out_biases = tf.Variable(tf.random.normal(shape=[self._num_labels]))
 
         # dropout (keep probability)
         #self.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
@@ -270,10 +270,10 @@ class CnnHeadPoseEstimator:
             if(DEBUG == True): print("SHAPE X: " + str(X.get_shape()))
 
             # Convolution Layer 1
-            conv1 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(X, self.hp_conv1_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hp_conv1_biases))
+            conv1 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(X, filters=self.hp_conv1_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hp_conv1_biases))
             if(DEBUG == True): print("SHAPE conv1: " + str(conv1.get_shape()))
             # Max Pooling (down-sampling)
-            pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool1 = tf.nn.max_pool2d(input=conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool1: " + str(pool1.get_shape()))
             # Apply Normalization
             norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -281,10 +281,10 @@ class CnnHeadPoseEstimator:
             #norm1 = tf.nn.dropout(norm1, _dropout)
 
             # Convolution Layer 2
-            conv2 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm1, self.hp_conv2_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hp_conv2_biases))
+            conv2 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm1, filters=self.hp_conv2_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hp_conv2_biases))
             if(DEBUG == True): print("SHAPE conv2: " + str(conv2.get_shape()))
             # Max Pooling (down-sampling)
-            pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool2 = tf.nn.max_pool2d(input=conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool2: " + str(pool2.get_shape()))
             # Apply Normalization
             norm2 = tf.nn.lrn(pool2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -292,10 +292,10 @@ class CnnHeadPoseEstimator:
             #norm2 = tf.nn.dropout(norm2, _dropout)
 
             # Convolution Layer 3
-            conv3 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm2, self.hp_conv3_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hp_conv3_biases))
+            conv3 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm2, filters=self.hp_conv3_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hp_conv3_biases))
             if(DEBUG == True): print("SHAPE conv3: " + str(conv3.get_shape()))
             # Max Pooling (down-sampling)
-            pool3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool3 = tf.nn.max_pool2d(input=conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool3: " + str(pool3.get_shape()))
             # Apply Normalization
             norm3 = tf.nn.lrn(pool3, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -327,34 +327,34 @@ class CnnHeadPoseEstimator:
         """
         self._num_labels = 1
         # Input data [batch_size, image_size, image_size, channels]
-        self.tf_roll_input_vector = tf.placeholder(tf.float32, shape=(64, 64, 3))
+        self.tf_roll_input_vector = tf.compat.v1.placeholder(tf.float32, shape=(64, 64, 3))
 
         # Variables
         #Conv layer
         #[patch_size, patch_size, num_channels, depth]
-        self.hr_conv1_weights = tf.Variable(tf.truncated_normal([3, 3, 3, 64], stddev=0.1))
+        self.hr_conv1_weights = tf.Variable(tf.random.truncated_normal([3, 3, 3, 64], stddev=0.1))
         self.hr_conv1_biases = tf.Variable(tf.zeros([64]))
         #Conv layer
         #[patch_size, patch_size, depth, depth]
-        self.hr_conv2_weights = tf.Variable(tf.truncated_normal([3, 3, 64, 128], stddev=0.1))
-        self.hr_conv2_biases = tf.Variable(tf.random_normal(shape=[128]))
+        self.hr_conv2_weights = tf.Variable(tf.random.truncated_normal([3, 3, 64, 128], stddev=0.1))
+        self.hr_conv2_biases = tf.Variable(tf.random.normal(shape=[128]))
         #Conv layer
         #[patch_size, patch_size, depth, depth]
-        self.hr_conv3_weights = tf.Variable(tf.truncated_normal([3, 3, 128, 256], stddev=0.1)) #was[3, 3, 128, 256]
-        self.hr_conv3_biases = tf.Variable(tf.random_normal(shape=[256]))
+        self.hr_conv3_weights = tf.Variable(tf.random.truncated_normal([3, 3, 128, 256], stddev=0.1)) #was[3, 3, 128, 256]
+        self.hr_conv3_biases = tf.Variable(tf.random.normal(shape=[256]))
 
         #Dense layer
         #[ 5*5 * previous_layer_out , num_hidden] wd1
         #here 5*5 is the size of the image after pool reduction (divide by half 3 times)
-        self.hr_dense1_weights = tf.Variable(tf.truncated_normal([8 * 8 * 256, 256], stddev=0.1)) #was [5*5*256, 1024]
-        self.hr_dense1_biases = tf.Variable(tf.random_normal(shape=[256]))
+        self.hr_dense1_weights = tf.Variable(tf.random.truncated_normal([8 * 8 * 256, 256], stddev=0.1)) #was [5*5*256, 1024]
+        self.hr_dense1_biases = tf.Variable(tf.random.normal(shape=[256]))
         #Dense layer
         #[ , num_hidden] wd2
         #self.hr_dense2_weights = tf.Variable(tf.truncated_normal([256, 256], stddev=0.01))
         #self.hr_dense2_biases = tf.Variable(tf.random_normal(shape=[256]))
         #Output layer
-        self.hr_out_weights = tf.Variable(tf.truncated_normal([256, self._num_labels], stddev=0.1))
-        self.hr_out_biases = tf.Variable(tf.random_normal(shape=[self._num_labels]))
+        self.hr_out_weights = tf.Variable(tf.random.truncated_normal([256, self._num_labels], stddev=0.1))
+        self.hr_out_biases = tf.Variable(tf.random.normal(shape=[self._num_labels]))
 
         # dropout (keep probability)
         #self.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
@@ -366,10 +366,10 @@ class CnnHeadPoseEstimator:
             if(DEBUG == True): print("SHAPE X: " + str(X.get_shape()))
 
             # Convolution Layer 1
-            conv1 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(X, self.hr_conv1_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hr_conv1_biases))
+            conv1 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(X, filters=self.hr_conv1_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hr_conv1_biases))
             if(DEBUG == True): print("SHAPE conv1: " + str(conv1.get_shape()))
             # Max Pooling (down-sampling)
-            pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool1 = tf.nn.max_pool2d(input=conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool1: " + str(pool1.get_shape()))
             # Apply Normalization
             norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -377,10 +377,10 @@ class CnnHeadPoseEstimator:
             #norm1 = tf.nn.dropout(norm1, _dropout)
 
             # Convolution Layer 2
-            conv2 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm1, self.hr_conv2_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hr_conv2_biases))
+            conv2 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm1, filters=self.hr_conv2_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hr_conv2_biases))
             if(DEBUG == True): print("SHAPE conv2: " + str(conv2.get_shape()))
             # Max Pooling (down-sampling)
-            pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool2 = tf.nn.max_pool2d(input=conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool2: " + str(pool2.get_shape()))
             # Apply Normalization
             norm2 = tf.nn.lrn(pool2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -388,10 +388,10 @@ class CnnHeadPoseEstimator:
             #norm2 = tf.nn.dropout(norm2, _dropout)
 
             # Convolution Layer 3
-            conv3 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm2, self.hr_conv3_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hr_conv3_biases))
+            conv3 = tf.tanh(tf.nn.bias_add(tf.nn.conv2d(norm2, filters=self.hr_conv3_weights, strides=[1, 1, 1, 1], padding='SAME'),self.hr_conv3_biases))
             if(DEBUG == True): print("SHAPE conv3: " + str(conv3.get_shape()))
             # Max Pooling (down-sampling)
-            pool3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            pool3 = tf.nn.max_pool2d(input=conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
             if(DEBUG == True): print("SHAPE pool3: " + str(pool3.get_shape()))
             # Apply Normalization
             norm3 = tf.nn.lrn(pool3, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
@@ -436,7 +436,7 @@ class CnnHeadPoseEstimator:
 
         if(os.path.isfile(pitchFilePath)==False): raise ValueError('[DEEPGAZE] CnnHeadPoseEstimator(load_pitch_variables): the pitch file path is incorrect.')
 
-        tf.train.Saver(({"conv1_pitch_w": self.hp_conv1_weights, "conv1_pitch_b": self.hp_conv1_biases,
+        tf.compat.v1.train.Saver(({"conv1_pitch_w": self.hp_conv1_weights, "conv1_pitch_b": self.hp_conv1_biases,
                          "conv2_pitch_w": self.hp_conv2_weights, "conv2_pitch_b": self.hp_conv2_biases,
                          "conv3_pitch_w": self.hp_conv3_weights, "conv3_pitch_b": self.hp_conv3_biases,
                          "dense1_pitch_w": self.hp_dense1_weights, "dense1_pitch_b": self.hp_dense1_biases,
@@ -464,7 +464,7 @@ class CnnHeadPoseEstimator:
 
         if(os.path.isfile(rollFilePath)==False): raise ValueError('[DEEPGAZE] CnnHeadPoseEstimator(load_roll_variables): the roll file path is incorrect.')
 
-        tf.train.Saver(({"conv1_roll_w": self.hr_conv1_weights, "conv1_roll_b": self.hr_conv1_biases,
+        tf.compat.v1.train.Saver(({"conv1_roll_w": self.hr_conv1_weights, "conv1_roll_b": self.hr_conv1_biases,
                          "conv2_roll_w": self.hr_conv2_weights, "conv2_roll_b": self.hr_conv2_biases,
                          "conv3_roll_w": self.hr_conv3_weights, "conv3_roll_b": self.hr_conv3_biases,
                          "dense1_roll_w": self.hr_dense1_weights, "dense1_roll_b": self.hr_dense1_biases,

@@ -122,18 +122,18 @@ with graph.as_default():
     num_labels = 3
     
     #0- datasets
-    tf_train_dataset = tf.placeholder(tf.float32,shape=(batch_size, image_size * image_size))
-    tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
+    tf_train_dataset = tf.compat.v1.placeholder(tf.float32,shape=(batch_size, image_size * image_size))
+    tf_train_labels = tf.compat.v1.placeholder(tf.float32, shape=(batch_size, num_labels))
     tf_valid_dataset = tf.constant(validation_dataset)
     #Sanitized version
     tf_test_dataset = tf.constant(test_dataset)
     
     #1- weights
     #tf.truncated_normal(shape, mean=0.0, stddev=1.0)
-    weights_input0 = tf.Variable(tf.truncated_normal([image_size * image_size, num_hidden_units_1], 0.0, 1.0))    
-    weights_hidden1 = tf.Variable(tf.truncated_normal([num_hidden_units_1, num_hidden_units_2], 0.0, 1.0))
-    weights_hidden2 = tf.Variable(tf.truncated_normal([num_hidden_units_2, num_hidden_units_3], 0.0, 1.0))
-    weights_output3 = tf.Variable(tf.truncated_normal([num_hidden_units_3, num_labels], 0.0, 1.0))    
+    weights_input0 = tf.Variable(tf.random.truncated_normal([image_size * image_size, num_hidden_units_1], 0.0, 1.0))    
+    weights_hidden1 = tf.Variable(tf.random.truncated_normal([num_hidden_units_1, num_hidden_units_2], 0.0, 1.0))
+    weights_hidden2 = tf.Variable(tf.random.truncated_normal([num_hidden_units_2, num_hidden_units_3], 0.0, 1.0))
+    weights_output3 = tf.Variable(tf.random.truncated_normal([num_hidden_units_3, num_labels], 0.0, 1.0))    
     
     #2- biases
     biases_input0 = tf.Variable(tf.zeros([num_hidden_units_1]))
@@ -142,7 +142,7 @@ with graph.as_default():
     biases_output3 = tf.Variable(tf.zeros([num_labels]))
  
     #3- Defining a variable for saving the session parameters
-    saver = tf.train.Saver({'dnn_weights_input0': weights_input0, 
+    saver = tf.compat.v1.train.Saver({'dnn_weights_input0': weights_input0, 
                             'dnn_weights_hidden1': weights_hidden1,   
                             'dnn_weights_hidden2': weights_hidden2,
                             'dnn_weights_output3': weights_output3,
@@ -172,7 +172,7 @@ with graph.as_default():
     learning_rate = 0.001
     global_step = tf.Variable(0)  # count the number of steps taken.
     #learning_rate = tf.train.exponential_decay(0.5, global_step, 5000, 0.96, staircase=True)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step) 
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step) 
         
     #Valid prediction
     valid_prediction = multilayer_model(tf_valid_dataset, 
@@ -193,8 +193,8 @@ with graph.as_default():
 
 num_steps = 50001
 
-with tf.Session(graph=graph) as session:
-  tf.initialize_all_variables().run()
+with tf.compat.v1.Session(graph=graph) as session:
+  tf.compat.v1.initialize_all_variables().run()
   print("Starting Training...")
   print("Train dataset shape: ", training_dataset.shape)
   for step in range(num_steps):

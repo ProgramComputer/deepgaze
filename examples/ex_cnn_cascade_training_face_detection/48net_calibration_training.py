@@ -71,44 +71,44 @@ def main():
         with graph.as_default():
             tf_initializer = None #tf.random_normal_initializer()
             # Input data.
-            tf_train_dataset = tf.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
-            tf_train_labels = tf.placeholder(tf.float32, shape=(batch_size, num_labels))
-            tf_test_dataset = tf.placeholder(tf.float32, shape=(None, image_size, image_size, num_channels))
+            tf_train_dataset = tf.compat.v1.placeholder(tf.float32, shape=(batch_size, image_size, image_size, num_channels))
+            tf_train_labels = tf.compat.v1.placeholder(tf.float32, shape=(batch_size, num_labels))
+            tf_test_dataset = tf.compat.v1.placeholder(tf.float32, shape=(None, image_size, image_size, num_channels))
             # Variables.
             # Conv layer
             # [patch_size, patch_size, num_channels, depth]
-            conv1_weights = tf.get_variable("conv1_48c_w", [5, 5, num_channels, 64], initializer=tf_initializer)
+            conv1_weights = tf.compat.v1.get_variable("conv1_48c_w", [5, 5, num_channels, 64], initializer=tf_initializer)
             conv1_biases = tf.Variable(tf.zeros([64]), name="conv1_48c_b")
             # Conv layer
             # [patch_size, patch_size, num_channels, depth]
-            conv2_weights = tf.get_variable("conv2_48c_w", [5, 5, 64, 64], initializer=tf_initializer)
+            conv2_weights = tf.compat.v1.get_variable("conv2_48c_w", [5, 5, 64, 64], initializer=tf_initializer)
             conv2_biases = tf.Variable(tf.zeros([64]), name="conv2_48c_b")
             # Dense layer
             # [ 5*5 * previous_layer_out , num_hidden] wd1
             # after 1 pooling the 48x48 image is reduced to size 24x24
-            dense1_weights = tf.get_variable("dense1_48c_w", [24 * 24 * 64, 256], initializer=tf_initializer)
-            dense1_biases = tf.Variable(tf.random_normal(shape=[256]), name="dense1_48c_b")
+            dense1_weights = tf.compat.v1.get_variable("dense1_48c_w", [24 * 24 * 64, 256], initializer=tf_initializer)
+            dense1_biases = tf.Variable(tf.random.normal(shape=[256]), name="dense1_48c_b")
             # Output layer
-            layer_out_weights = tf.get_variable("out_48c_w", [256, num_labels], initializer=tf_initializer)
-            layer_out_biases = tf.Variable(tf.random_normal(shape=[num_labels]), name="out_48c_b")
+            layer_out_weights = tf.compat.v1.get_variable("out_48c_w", [256, num_labels], initializer=tf_initializer)
+            layer_out_biases = tf.Variable(tf.random.normal(shape=[num_labels]), name="out_48c_b")
             # dropout (keep probability)
-            keep_prob = tf.placeholder(tf.float32)
+            keep_prob = tf.compat.v1.placeholder(tf.float32)
 
             # Model.
             def model(data, _dropout=1.0):
                 X = tf.reshape(data, shape=[-1, image_size, image_size, num_channels])
                 print("SHAPE X: " + str(X.get_shape()))  # Convolution Layer 1
-                conv1 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(X, conv1_weights, strides=[1, 1, 1, 1], padding='SAME'), conv1_biases))
+                conv1 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(X, filters=conv1_weights, strides=[1, 1, 1, 1], padding='SAME'), conv1_biases))
                 print("SHAPE conv1: " + str(conv1.get_shape()))
                 # Max Pooling (down-sampling)
-                pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+                pool1 = tf.nn.max_pool2d(input=conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
                 print("SHAPE pool1: " + str(pool1.get_shape()))
                 # Apply Normalization
                 norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
                 # Apply Dropout
-                norm1 = tf.nn.dropout(norm1, _dropout)
+                norm1 = tf.nn.dropout(norm1, rate=1 - (_dropout))
                 # Second Convolution
-                conv2 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(norm1, conv2_weights, strides=[1, 1, 1, 1], padding='SAME'), conv2_biases))
+                conv2 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(norm1, filters=conv2_weights, strides=[1, 1, 1, 1], padding='SAME'), conv2_biases))
                 print("SHAPE conv2: " + str(conv2.get_shape()))
                 # Max Pooling (down-sampling)
                 #pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
@@ -116,12 +116,12 @@ def main():
                 # Apply Normalization
                 norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75)
                 # Apply Dropout
-                norm2 = tf.nn.dropout(norm2, _dropout)
+                norm2 = tf.nn.dropout(norm2, rate=1 - (_dropout))
                 # Fully connected layer
                 dense1 = tf.reshape(norm2, [-1, dense1_weights.get_shape().as_list()[0]])  # Reshape conv3
                 print("SHAPE dense1: " + str(dense1.get_shape()))
                 dense1 = tf.nn.relu(tf.matmul(dense1, dense1_weights) + dense1_biases)  # Relu
-                dense1 = tf.nn.dropout(dense1, _dropout)
+                dense1 = tf.nn.dropout(dense1, rate=1 - (_dropout))
                 # Output layer
                 out = tf.matmul(dense1, layer_out_weights) + layer_out_biases
                 print("SHAPE out: " + str(out.get_shape()))
@@ -130,18 +130,18 @@ def main():
 
             # Training computation.
             logits = model(tf_train_dataset, keep_prob)
-            loss = tf.reduce_mean( tf.nn.softmax_cross_entropy_with_logits(labels=tf_train_labels, logits=logits))      
+            loss = tf.reduce_mean( tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(tf_train_labels), logits=logits))      
             #- Adding the regularization terms to the loss
             #beta =  5e-4 #it was: 5e-4 = 0.0005
             #loss += (beta * tf.nn.l2_loss(conv1_weights)) 
             #loss += (beta * tf.nn.l2_loss(dense1_weights))
             #loss += (beta * tf.nn.l2_loss(layer_out_weights))   
-            loss_summ = tf.summary.scalar("loss", loss)
+            loss_summ = tf.compat.v1.summary.scalar("loss", loss)
 
             # Find the batch accuracy and save it in summary
             accuracy = tf.equal(tf.argmax(tf_train_labels, 1), tf.argmax(logits, 1))
             accuracy = tf.reduce_mean(tf.cast(accuracy, tf.float32))
-            accuracy_summary = tf.summary.scalar("accuracy", accuracy)
+            accuracy_summary = tf.compat.v1.summary.scalar("accuracy", accuracy)
 
             # Optimizer.
             # learning_rate = 0.001 #it was: 0.001
@@ -153,29 +153,29 @@ def main():
             #optimizer = tf.train.RMSPropOptimizer(learning_rate=0.001, decay=0.9, momentum=0.0, epsilon=1e-10, use_locking=False, name='RMSProp').minimize(loss, global_step=global_step)
             #optimizer = tf.train.AdagradOptimizer(learning_rate=0.00625).minimize(loss, global_step=global_step)
             #optimizer = tf.train.MomentumOptimizer(learning_rate=0.0001, momentum=0.95).minimize(loss, global_step=global_step)
-            optimizer = tf.train.AdadeltaOptimizer(learning_rate=0.001, rho=0.95, epsilon=1e-08, use_locking=False, name='Adadelta').minimize(loss, global_step=global_step)
+            optimizer = tf.compat.v1.train.AdadeltaOptimizer(learning_rate=0.001, rho=0.95, epsilon=1e-08, use_locking=False, name='Adadelta').minimize(loss, global_step=global_step)
 
             # Predictions for the training, validation, and test data.
             train_prediction = logits
             #valid_prediction = model(tf_validation_dataset)
             # Call test_prediction and pass the test inputs to have test accuracy
             test_prediction = model(tf_test_dataset)
-            _, test_accuracy = tf.metrics.accuracy(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
-            _, test_recall = tf.metrics.recall(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
-            _, test_precision = tf.metrics.precision(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
-            _, test_false_positives = tf.metrics.false_positives(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
-            _, test_false_negatives = tf.metrics.false_negatives(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
+            _, test_accuracy = tf.compat.v1.metrics.accuracy(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
+            _, test_recall = tf.compat.v1.metrics.recall(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
+            _, test_precision = tf.compat.v1.metrics.precision(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
+            _, test_false_positives = tf.compat.v1.metrics.false_positives(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
+            _, test_false_negatives = tf.compat.v1.metrics.false_negatives(labels=tf.argmax(test_label, 1), predictions=tf.argmax(test_prediction, 1))
 
             # Save all the variables
-            saver = tf.train.Saver()
-            with tf.Session(graph=graph) as session:
+            saver = tf.compat.v1.train.Saver()
+            with tf.compat.v1.Session(graph=graph) as session:
                 # Summary definition
-                merged_summaries = tf.summary.merge_all()
+                merged_summaries = tf.compat.v1.summary.merge_all()
                 now = datetime.datetime.now()
                 log_path = "./logs/log_48net_detection_" + str(now.hour) + str(now.minute) + str(now.second)
-                writer_summaries = tf.summary.FileWriter(log_path, session.graph)
-                tf.global_variables_initializer().run()
-                tf.local_variables_initializer().run()
+                writer_summaries = tf.compat.v1.summary.FileWriter(log_path, session.graph)
+                tf.compat.v1.global_variables_initializer().run()
+                tf.compat.v1.local_variables_initializer().run()
                 # tf.initialize_all_variables().run()
                 print('Initialized')
 
